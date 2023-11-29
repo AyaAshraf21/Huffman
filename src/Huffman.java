@@ -54,7 +54,7 @@ public class Huffman {
 
     static void generateCode(Node root , Map<Character, String> charCode , String code ){
         if(root == null){
-            return;
+            return ;
         }
         if(root.symbol != '\0'){
             charCode.put(root.symbol , code);
@@ -72,15 +72,21 @@ public class Huffman {
         Node root = buildHuffmanTree(charFrequency);
         generateCode(root , charCode , "");
 
-        String freqChar = "";
-        for(char ch : charFrequency.keySet()) {
-            freqChar += ch;
-            freqChar += charFrequency.get(ch);
-            freqChar += ' ';
-        }
-        String compressedText = "";
+        String binaryText = "" , compressedText = "";
         for(char ch : input.toCharArray()) {
-            compressedText += charCode.get(ch);
+            binaryText += charCode.get(ch);
+        }
+        for(int i = 0; i < binaryText.length(); i+=8) {
+            String binaryString =  binaryText.substring(i, Math.min(i + 8, binaryText.length()));
+            int intValue = Integer.parseInt(binaryString, 2);
+            compressedText += (char) intValue;
+        }
+
+        String huffmanString = "";
+        for(char ch : charCode.keySet()){
+            huffmanString += ch;
+            huffmanString += charCode.get(ch);
+            huffmanString += " ";
         }
 
         String fileName = "compress.bin";
@@ -94,7 +100,7 @@ public class Huffman {
         }
         File file = new File(fileName);
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))){
-            writer.write(freqChar + "  " + compressedText);
+            writer.write( huffmanString+ "  " + compressedText);
         }
         catch (IOException e){
             e.printStackTrace();
@@ -104,8 +110,8 @@ public class Huffman {
 
     static void decompress(String pathName) {
         String input = readFromFile(pathName);
-        Map<Character, Integer> charFreq = new HashMap<>();
-        Map<Character, String> charCode = new HashMap<>();
+        //Map<Character, Integer> charFreq = new HashMap<>();
+        Map<String, Character> charCode = new HashMap<>();
         String fileName = "decompress.txt";
 
         try {
@@ -127,27 +133,23 @@ public class Huffman {
                val += input.charAt(i);
                i++;
            }
-           charFreq.put(ch, Integer.parseInt(val));
+           charCode.put(val , ch);
            i++;
        }
         i += 2;
-        Node root = buildHuffmanTree(charFreq);
-        generateCode(root , charCode , "");
-        String decompressedText = "";
-        Node current = root;
-        for (; i < input.length(); i++) {
-            if (input.charAt(i) == '0') {
-                current = current.left;
-            }
-            else {
-                current = current.right;
-            }
 
-            if (current != null && current.symbol != '\0') {
-                decompressedText += current.symbol;
-                current = root;
+        String decompressedText = "" , substr = "";
+        for (; i < input.length(); i++) {
+            if(!charCode.containsKey(substr)){
+                substr += input.charAt(i);
+            }
+            else{
+                decompressedText += charCode.get(substr);
+                substr = "";
             }
         }
+
+        System.out.println(decompressedText);
 
         File file = new File(fileName);
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
