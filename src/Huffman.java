@@ -25,6 +25,8 @@ public class Huffman {
     }
 
 
+
+
     static Map<Character, Integer> countFrequency (String input) {
         Map<Character, Integer> charfreq = new HashMap<>();
         for (char c : input.toCharArray()) {
@@ -60,8 +62,8 @@ public class Huffman {
             charCode.put(root.symbol , code);
         }
 
-        generateCode(root.left , charCode , code+"0");
-        generateCode(root.right , charCode , code+"1");
+        generateCode(root.left , charCode , code + "0");
+        generateCode(root.right , charCode , code + "1");
     }
 
 
@@ -76,11 +78,15 @@ public class Huffman {
         for(char ch : input.toCharArray()) {
             binaryText += charCode.get(ch);
         }
+
         for(int i = 0; i < binaryText.length(); i+=8) {
             String binaryString =  binaryText.substring(i, Math.min(i + 8, binaryText.length()));
             int intValue = Integer.parseInt(binaryString, 2);
             compressedText += (char) intValue;
         }
+        int lastSubString = binaryText.length() % 8;
+        if(lastSubString == 0)
+            lastSubString = 8;
 
         String huffmanString = "";
         for(char ch : charCode.keySet()){
@@ -98,19 +104,32 @@ public class Huffman {
         catch (IOException e) {
             System.err.println("An error occurred while creating the file: " + e.getMessage());
         }
-        File file = new File(fileName);
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))){
-            writer.write( huffmanString+ "  " + compressedText);
-        }
-        catch (IOException e){
+        try (DataOutputStream writer = new DataOutputStream(new FileOutputStream(fileName))) {
+            writer.writeBytes(huffmanString + "  " + lastSubString + compressedText);
+        } catch (IOException e) {
             e.printStackTrace();
         }
+
     }
 
 
+    static String readFromFileBinary(String pathName) {
+        File file = new File(pathName);
+        String text = "";
+        try (DataInputStream reader = new DataInputStream(new FileInputStream(file))) {
+            while (reader.available() > 0) {
+                char c = (char) reader.readByte();
+                text += c;
+            }
+        }
+        catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        return text;
+    }
+
     static void decompress(String pathName) {
-        String input = readFromFile(pathName);
-        //Map<Character, Integer> charFreq = new HashMap<>();
+        String input = readFromFileBinary(pathName);
         Map<String, Character> charCode = new HashMap<>();
         String fileName = "decompress.txt";
 
@@ -123,41 +142,55 @@ public class Huffman {
             System.err.println("An error occurred while creating the file: " + e.getMessage());
         }
 
-
-       int i = 0;
-       while(input.charAt(i) != ' ' && input.charAt(i + 1) != ' ') {
-           char ch = input.charAt(i);
-           String val = "";
-           i++;
-           while(input.charAt(i) != ' ') {
-               val += input.charAt(i);
-               i++;
-           }
-           charCode.put(val , ch);
-           i++;
-       }
-        i += 2;
-
-        String decompressedText = "" , substr = "";
-        for (; i < input.length(); i++) {
-            if(!charCode.containsKey(substr)){
-                substr += input.charAt(i);
+        int i = 0;
+        while (input.charAt(i) != ' ' && input.charAt(i + 1) != ' ') {
+            char ch = input.charAt(i);
+            String val = "";
+            i++;
+            while (input.charAt(i) != ' ') {
+                val += input.charAt(i);
+                i++;
             }
-            else{
+            charCode.put(val, ch);
+            i++;
+        }
+
+        i += 2;
+        int lastSubString = Character.getNumericValue(input.charAt(i));
+        input = input.substring(i + 1);
+
+        String binaryText = "";
+        for (int j = 0; j < input.length() - 1; j++) {
+            binaryText += String.format("%8s", Integer.toBinaryString(input.charAt(j) & 0xFF)).replace(' ', '0');
+        }
+        binaryText += String.format("%" + lastSubString + "s", Integer.toBinaryString(input.charAt(input.length()-1) & 0xFF)).replace(' ', '0');
+
+        String decompressedText = "";
+        String substr = "";
+        for (int j = 0; j < binaryText.length(); j++) {
+            substr += binaryText.charAt(j);
+            if (charCode.containsKey(substr.toString())) {
                 decompressedText += charCode.get(substr);
                 substr = "";
             }
         }
 
-        System.out.println(decompressedText);
-
         File file = new File(fileName);
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
-            writer.write(decompressedText);
-        } catch (IOException e) {
+            writer.write(decompressedText.toString());
+        }
+        catch (IOException e) {
             e.printStackTrace();
         }
     }
 
 }
+
+
+
+
+
+
+
+
 
