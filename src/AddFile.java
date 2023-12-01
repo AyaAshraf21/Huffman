@@ -41,6 +41,7 @@ public class AddFile extends JFrame {
                 {
                     Huffman.decompress(filePath);
                 }
+                dispose();
             }
         });
     }
